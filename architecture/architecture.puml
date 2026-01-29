@@ -1,0 +1,78 @@
+@startuml Reverse_Engineering_Agent_AWS_Architecture
+
+!include <aws/common>
+!include <aws/Compute/all>
+!include <aws/Database/all>
+!include <aws/Storage/all>
+!include <aws/Network/all>
+!include <aws/Security/all>
+!include <aws/Management/all>
+!include <aws/ApplicationIntegration/all>
+!include <aws/MachineLearning/all>
+
+skinparam linetype ortho
+
+' Components
+CloudFront(user_zone, "User Zone", "")
+S3(web_app, "Web App", "")
+DynamoDB(dynamodb_reporequest, "DynamoDB table", "")
+S3(s3_bucket, "S3 Bucket", "")
+
+Lambda(repo_process_init_lambda, "Repository Processing init Lambda", "")
+Lambda(chunk_process_lambda, "inline comments Processing Lambda", "")
+Lambda(reverseeng_prompt_lambda, "Reverse Engineering Prompt Lambda", "")
+Lambda(signeds3url_lambda, "Signed S3 URL Lambda", "")
+Lambda(kb_lambda, "Knowledge Base Lambda", "")
+Lambda(repo_doc_generator_lambda, "Default Doc Generator Lambda", "")
+
+SQS(repo_process_queue, "Repository Processing Queue", "")
+SQS(commented_files_kb_sync_queue, "KB Sync request", "")
+SimpleEmailService(email_notification, "Email Notification", "")
+Lambda(ce_doc_view_lambda, "CE Doc View Lambda", "")
+
+SageMaker(llm, "LLM (Claude 3)", "")
+APIGateway(api_gateway, "API Gateway", "")
+
+' Document upload flow
+user_zone --> web_app : "0 upload archive"
+web_app --> api_gateway : "1 get pre-signed url"
+api_gateway --> signeds3url_lambda : "2 get pre-signed url"
+signeds3url_lambda --> s3_bucket : "3 get pre-signed url"
+s3_bucket --> s3_bucket : "4 store archive file"
+
+' Data upload to S3, now submit to be to process
+web_app --> api_gateway : "5 prepare repo processing request"
+api_gateway --> repo_process_init_lambda : "6 trigger lambda for repo processing"
+repo_process_init_lambda --> dynamodb_reporequest : "7 store repo processing request"
+repo_process_init_lambda --> repo_process_queue : "8 submit repo for processing"
+repo_process_init_lambda --> email_notification : "9 trigger email notification"
+
+repo_process_queue --> chunk_process_lambda : "8.1 trigger the chunking mechanism for reverse engineering"
+chunk_process_lambda --> dynamodb_reporequest : "8.2 get the object to process"
+chunk_process_lambda --> s3_bucket : "8.3 get the repo archive file from S3"
+chunk_process_lambda --> llm : "8.4 improve inline comments"
+chunk_process_lambda --> commented_files_kb_sync_queue : "8.5 message for kb sync"
+commented_files_kb_sync_queue --> kb_lambda : "8.5.1 trigger the kb sync lambda"
+kb_lambda --> llm : "8.5.2 initiate kb sync with s3 objects"
+kb_lambda --> dynamodb_reporequest : "8.5.3 update status ready for query"
+
+' Get default system documentation
+web_app --> api_gateway : "9 generate reverse engineering system documentation"
+api_gateway --> repo_doc_generator_lambda : "10 trigger lambda for documentation generation"
+repo_doc_generator_lambda --> llm : "11 send prompt to llm for documentation generation"
+repo_doc_generator_lambda --> s3_bucket : "12 store the documentation in s3"
+repo_doc_generator_lambda --> dynamodb_reporequest : "13 update status ready for query"
+repo_doc_generator_lambda --> email_notification : "13 trigger email notification"
+
+' Request accessing code explainability documents
+web_app --> api_gateway : "14 request accessing code explainability documents"
+api_gateway --> ce_doc_view_lambda : "15 trigger lambda for code explainability documents"
+ce_doc_view_lambda --> dynamodb_reporequest : "16 list docs and their links"
+
+' Process the new prompts
+web_app --> api_gateway : "17 submit new user prompt for code explainability"
+api_gateway --> reverseeng_prompt_lambda : "18 trigger lambda for code explainability"
+reverseeng_prompt_lambda --> dynamodb_reporequest : "19 get the code explainability documents from s3"
+reverseeng_prompt_lambda --> llm : "20 get the response for prompt message"
+
+@enduml

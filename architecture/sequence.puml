@@ -1,0 +1,53 @@
+@startuml System_Sequence_Diagram
+
+autonumber
+
+actor User
+participant "Web App (S3/CloudFront)" as WebApp
+participant "API Gateway" as APIGW
+participant "AWS Lambda Functions" as Lambda
+participant "SQS Queues" as SQS
+participant "DynamoDB" as DDB
+participant "S3 Bucket" as S3
+participant "LLM (Claude 3 / Bedrock)" as LLM
+
+group 1. Repository Ingestion & Upload
+    User -> WebApp : Upload Repository Archive
+    WebApp -> APIGW : Request Pre-signed URL
+    APIGW -> Lambda : Trigger Signed S3 URL Lambda
+    Lambda -->> WebApp : Return S3 Signed URL
+    WebApp -> S3 : Store Archive/File
+end
+
+group 2. Background Processing & KB Sync
+    WebApp -> APIGW : Prepare Repo Processing Request
+    APIGW -> Lambda : Repo Process Init Lambda
+    Lambda -> DDB : Store Processing Request
+    Lambda -> SQS : Submit Repo Processing Queue
+    SQS -> Lambda : Chunk Process Lambda (Reverse Engineering)
+    Lambda -> S3 : Get Repository Archive
+    Lambda -> LLM : Improve Inline Comments
+    Lambda -> SQS : KB Sync Request Queue
+    SQS -> Lambda : KB Lambda
+    Lambda -> LLM : Initiate KB Sync
+    Lambda -> DDB : Update Status (Ready for Query)
+end
+
+group 3. Documentation Generation
+    WebApp -> APIGW : Generate System Documentation
+    APIGW -> Lambda : Default Doc Generator Lambda
+    Lambda -> LLM : Send Prompt for Docs
+    Lambda -> S3 : Store Documentation
+    Lambda -> DDB : Update Status
+end
+
+group 4. User Interaction (RAG Flow)
+    User -> WebApp : Submit Prompt / Question
+    WebApp -> APIGW : Pass Request
+    APIGW -> Lambda : Reverse Engineering Prompt Lambda
+    Lambda -> DDB : Fetch Relevant Context/Docs
+    Lambda -> LLM : Generate Answer based on Context
+    LLM -->> User : Return Final Response
+end
+
+@enduml
