@@ -1,0 +1,6 @@
+{
+    "variables": {
+        "REGION_NAME": "ap-south-1",
+        "S3_BUCKET_NAME": "code-explainability-bucket"
+    }
+}

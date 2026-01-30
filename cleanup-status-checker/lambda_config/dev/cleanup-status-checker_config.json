@@ -1,0 +1,14 @@
+{
+    "variables": {
+        "DATABASE_NAME": "postgres",
+        "DATABASE_USER": "postgres",
+        "DATABASE_SECRET_NAME": "postgres",
+        "DEFAULT_DAYS_THRESHOLD": "30",
+        "DELAY_BETWEEN_KBS": "5",
+        "DYNAMODB_TABLE_NAME": "cleanup-status-checker",
+        "KB_PREFIX": "kb_",
+        "MAX_RETRIES": "3",
+        "REGION": "ap-south-1",
+        "RETRY_DELAY": "5"
+    }
+}
