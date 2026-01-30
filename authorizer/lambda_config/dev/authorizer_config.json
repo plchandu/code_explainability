@@ -1,0 +1,5 @@
+{
+    "variables": {
+        "ISSUER": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_123456789"
+    }
+}

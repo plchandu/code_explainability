@@ -1,0 +1,9 @@
+{
+    {
+        "variables": {
+            "DYNAMODB_TABLE_REPO_REQUESTS": "xuse1-dev-capture-feedback-requests",
+            "LAMBDA_NAME": "aig-gi-xuse1-dev-capture-feedback",
+            "TELEMETRY_FUNCTION_NAME": "aig-gi-xuse1-dev-re-push-telemetry"
+        }
+    }
+}

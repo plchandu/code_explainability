@@ -1,0 +1,3 @@
+requests
+python-jose
+rsa==4.0.0
